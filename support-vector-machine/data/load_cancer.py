@@ -24,7 +24,7 @@ def load_cancer():
         targets = []
         labelmap = {'M':1, "B":-1}
         for d in rawdata:
-            data.append(map(float, d[2:]))
+            data.append(list(map(float, d[2:])))
             targets.append(labelmap[d[1]])
         ds = DataSet()
         ds.data = data
@@ -34,6 +34,6 @@ def load_cancer():
 if __name__ == "__main__":
     ds = load_cancer()
     for d in ds.data:
-        print d
-    print ds.targets
-    
+        print(d)
+    print(ds.targets)
+

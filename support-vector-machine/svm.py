@@ -1,6 +1,3 @@
-'''
-Created on 27.02.2018
-'''
 
 from pyscipopt import Model, quicksum
 from data.load_cancer import load_cancer
@@ -12,7 +9,9 @@ import numpy as np
 
 mode = "linear" # mode is in ['linear', 'sparse']
 
-sparsity = .2  # between 0.0 and 1.0
+# sparsity of classifier: percentage of present features not being used for classification
+sparsity = .2  # between 0.0 and 1.0 (1: all features are used, 0: none are used)
+
 # C is a regularization parameter
 C = .125 # positive float
 
@@ -39,9 +38,6 @@ Y = np.array(dataset.targets)
 nfeatures = len(X[0]) # number of features (dimension of space)
 nexamples = len(Y) # number of examples
 
-weights = [0.0] * nfeatures # weights of features
-offset = 1.0 # offset
-
 #############    Model
 #############################################################################
 
@@ -57,25 +53,31 @@ model.setIntParam("display/verblevel", verbosity)
 
 omegas = []
 # add feature weight variables
-for f in xrange(nfeatures + 1):
-    omegas.append(model.addVar(vtype='C', name="omega_%d" % f, ub=weightBound, lb = -weightBound))
+for f in range(nfeatures + 1):
+    omegas.append(model.addVar(vtype='C',
+                               name="omega_%d" % f,
+                               ub=weightBound,
+                               lb = -weightBound))
 
 xis = []
 # add variables xi to penalize misclassification
-for x in xrange(nexamples):
-    xis.append(model.addVar(vtype='C', name="psi_%d" %x))
+for x in range(nexamples):
+    xis.append(model.addVar(vtype='C',
+                            name="psi_%d" %x))
 
 #############    Add variable for objective function
 #############################################################################
 
 # add variable for objective function, since objective function is not linear.
-objvar = model.addVar(vtype='C', name="objective", obj=1.0)
+objvar = model.addVar(vtype='C',
+                      name="objective",
+                      obj=1.0)
 
 # apply correction to account for unequal proportions of positive and negative example
 objCoeffs = [classWeights[0 if yi == -1 else 1] for yi in Y]
 
-model.addCons(quicksum(.5 *omegas[f]*omegas[f] for f in xrange(nfeatures)) \
-                   + quicksum(C / float(nexamples) * objCoeffs[x] * xis[x] for x in xrange(nexamples)) - objvar <= 0,
+model.addCons(quicksum(.5 *omegas[f]*omegas[f] for f in range(nfeatures)) \
+                   + quicksum(C / float(nexamples) * objCoeffs[x] * xis[x] for x in range(nexamples)) - objvar <= 0,
               name="objective_function")
 
 
@@ -83,35 +85,42 @@ model.addCons(quicksum(.5 *omegas[f]*omegas[f] for f in xrange(nfeatures)) \
 #############################################################################
 
 # do this for linear and sparse model
-for x in xrange(nexamples):
-    model.addCons(quicksum(Y[x] * X[x][f] * omegas[f] for f in xrange(nfeatures)) + Y[x] * omegas[nfeatures] >= + 1 - xis[x],
+for x in range(nexamples):
+    model.addCons(quicksum(Y[x] * X[x][f] * omegas[f] for f in range(nfeatures)) + Y[x] * omegas[nfeatures] >= + 1 - xis[x],
                   name="example_%d"%x)
 
 # sparse
 if mode == "sparse":
     vs = []
-    for f in xrange(nfeatures):
+    for f in range(nfeatures):
         vs.append(model.addVar(vtype='B', name="v_%d" % f))
-        model.addCons(omegas[f] <=  weightBound * vs[f], name="upper_vbound_%d"%f)
-        model.addCons(omegas[f] >= -weightBound * vs[f], name="lower_vbound_%d"%f)
+        model.addCons(omegas[f] <=  weightBound * vs[f],
+                      name="upper_vbound_%d"%f)
+        model.addCons(omegas[f] >= -weightBound * vs[f],
+                      name="lower_vbound_%d"%f)
 
-    model.addCons(quicksum(vs[f] for f in xrange(nfeatures)) <= int(sparsity * nfeatures),
+    model.addCons(quicksum(vs[f] for f in range(nfeatures)) <= int(sparsity * nfeatures),
                   name="sparsity")
 
 #############    Solve / optimize
 #############################################################################
 
 model.optimize()
-sols = model.getSols()
 
-if sols:
-    weights = [model.getSolVal(sols[0], omegas[f]) for f in xrange(nfeatures)]
-    offset = model.getSolVal(sols[0], omegas[nfeatures])
+sols = model.getSols()
+if not sols:
+    print("Could not find solutions, exiting.")
+    exit(0)
+
+weights = [model.getSolVal(sols[0], omegas[f]) for f in range(nfeatures)]
+offset = model.getSolVal(sols[0], omegas[nfeatures])
 
 #############    Predict
 #############################################################################
 # predict
-result = map(
+result = list(map(
         lambda X:
-            offset + sum((weights[f] * X[f] for f in xrange(len(X)))),
-        X)
+            offset + sum((weights[f] * X[f] for f in range(len(X)))),
+        X))
+
+print(result)
