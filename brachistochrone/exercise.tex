@@ -1,0 +1,110 @@
+\documentclass[12pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[margin=3cm]{geometry}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{paralist}
+
+\newcommand\abs[1]{\left|#1\right|}
+\newcommand{\R}{\mathbb{R}}
+\newcommand\ttt\texttt
+
+\setlength{\parindent}{0pt}
+
+\begin{document}
+
+\section*{Brachitochrone}
+
+\subsection*{Introduction}
+
+The \emph{Brachitochrone} problem asks for the curve that a particle needs to
+follow, only under the presence of gravity, to go from point $A$ to $B$ in the
+least amount of time.
+
+We will solve this problem with the help of SCIP.
+
+\subsection*{Problem formulation}
+
+Assume $A = (0,1)$, $B = (1,0)$. Given a curve $y(x)$ such that $y(0) = 1, y(1) = 0$, we can assign to it
+the time that a particle dropped at $A$ takes to get to $B$ following $y(x)$.
+
+We have that the velocity is $v = \tfrac{ds}{dt}$ and so the total time is
+\[
+    T = \int \frac{ds}{v}
+\]
+
+We have also that $ds = \sqrt{dx^2 + dy^2}$, and so
+\[
+    T = \int_0^1 \frac{\sqrt{1 + {y^{'}}^2}}{v} dx
+\]
+
+To find $v$ we can use that the energy of the system is constant.
+The energy is the sum of the kinetic ($\tfrac{1}{2} m v^2$) and potential energy ($m g y$).
+At the beginning, the energy is $E(0) = \tfrac{1}{2} m v(0)^2 + m g y(0) = m g$.
+Then at $x$, $E(x) = \tfrac{1}{2} m v(x)^2 + m g y(x)$ and since it is constant, $E(0) = E(x)$, which implies
+$v = \sqrt{2g(1 - y)}$
+
+Then, given a curve $y$, we obtain
+\[
+    T = \int_0^1 \frac{\sqrt{1 + {y^{'}}^2}}{\sqrt{2g(1 - y)}} dx
+\]
+and our task is to find the curve $y$ that minimizes $T$,
+\[
+    \min_{y} \int_0^1 \frac{\sqrt{1 + {y^{'}}^2}}{\sqrt{2g(1 - y)}} dx
+\]
+
+With techniques from calculus of variations this problem can be solved analytically.
+The optimal curve, for this particular case, is given parametrically on $\theta$ by
+% other possible values are
+% A = 0,0
+% B = 3,-2
+% constant = 1.00133
+% theta up to 3.069
+% time = 0.98
+\begin{align*}
+    x(\theta) &= 0.573 (\theta - \sin(\theta)) \\
+    y(\theta) &= -0.573 (1 - \cos(\theta)) \\
+       \theta &\in [0, 2.412]
+\end{align*}
+and the total time is $T = 0.583$
+
+\subsection*{Discretization}
+
+To use SCIP we need to discretize the problem.
+For this, we divide the integral in small pieces:
+
+\[
+    \int_0^1 \frac{\sqrt{1 + {y^{'}}^2}}{\sqrt{2g(1 - y)}} dx = \sum_{i = 0}^{N-1} \int_{x_i}^{x_{i+1}} \frac{\sqrt{1 + {y^{'}}^2}}{\sqrt{2g(1 - y)}} dx
+\]
+
+Assuming $y(x)$ to be linear for $x \in [x_i, x_{i+1}]$, we can write it as $y(x) = m_i (x - x_i) + y_i$,
+where $m_i = \tfrac{y_{i+1} - y_i}{x_{i+1} - x_i}$.
+With this, one can show that
+%\[
+%    \int_{x_i}^{x_{i+1}} \frac{\sqrt{1 + {y^{'}}^2}}{\sqrt{2g(1 - y)}} dx
+%    = \frac{\sqrt{1 + m_i^2}}{\sqrt{2g}} \int_{x_i}^{x_{i+1}} \frac{1}{\sqrt{1 - y}} dx
+%\]
+%
+%Let us compute the integral
+%\begin{align*}
+%    \int_{x_i}^{x_{i+1}} \frac{1}{\sqrt{1 - m_i(x-x_i) - y_i}} dx
+%    &= -\frac{2}{m_i} \sqrt{1 - m_i(x-x_i) - y_i}\Big|_{x_i}^{x_{i+1}} \\
+%    &= -\frac{2}{m_i} (\sqrt{1 - y_{i+1}} - \sqrt{1 - y_{i}}) \\
+%\end{align*}
+%
+%So putting all together and rationalizing the expression $(\sqrt{1 - y_{i+1}} - \sqrt{1 - y_{i}})$ we obtain
+\[
+    \int_0^1 \frac{\sqrt{1 + {y^{'}}^2}}{\sqrt{2g(1 - y)}} dx
+    \approx
+    \sqrt{\frac{2}{g}} \sum_{i = 0}^{N-1} \frac{\sqrt{(x_{i+1} - x_i)^2 + (y_{i+1} - y_i)^2}}{\sqrt{1 - y_{i+1}} + \sqrt{1 - y_{i}}}
+\]
+
+\subsection*{Using SCIP}
+
+Your task is to write a model to solve the discretized problem with PySCIPOpt.
+
+(Optional) Show how to obtain the discretization.
+
+\end{document}
+
