@@ -31,28 +31,33 @@ Advantages of a sparse classifier are a \emph{smaller} cost of classification an
 \subsection*{Linear SVM, a discrete optimization model for sparse SVM}
 
 Let the set of datapoints consist of $n$ $d$-dimensional features $X \in \R^{n,d}$, labeled by $y \in \{-1,+1\}^{n}$ and let $C > 0$ be a regularization parameter.
-As a loss function, we consider the \emph{Hinge loss}
-$l^{i}(x) :=  \max \{0, 1 - y^{i}x\}$ for $i \in \{1,\dots, n\}$
+As a loss function, we consider the \emph{Hinge loss}:
+$$l^{i}(x) :=  \max \{0, 1 - y^{i}x\} \text{ for } i \in \{1,\dots, n\}$$
 
-\begin{equation*} \begin{aligned}
-  & \min\limits_{\omega, b}
-  & & \frac{C}{n} \sum\limits_{i = 1}^{n}
-  \begin{array}[t]{c}
-    \underbrace{\max\{0, (1 - y^{i} (\omega^{T}X^{i} + b)\}}\\
-          =: \xi^{i} \geq 0
-  \end{array}
-  +\frac{1}{2} \lVert \omega \rVert_{2}^{2}
-\end{aligned} \end{equation*}
+Our support vector machine can then be written as the following minimization problem:
 
-$$ \Leftrightarrow $$
+$$
+\min\limits_{\omega, b}
+\frac{C}{n} \sum\limits_{i = 1}^{n} l^i(\omega^{T}X^{i} + b)
++\frac{1}{2} \lVert \omega \rVert_{2}^{2}
+$$
 
-\begin{equation*} \begin{aligned}
+Substituting the Hinge loss for a variable
+\begin{align*}
+  \xi^{i} :&= l^i(\omega^{T}X^{i} + b) \\
+  &= \max \{0, 1 - y^i (\omega^{T}X^{i} + b) \}
+\end{align*}
+the problem is equivalent to:
+
+$$
+\begin{aligned}
   & \min\limits_{\omega, b}
   & & \frac{C}{n} \sum\limits_{i = 1}^{n} \xi^{i} + \frac{1}{2} \lVert \omega \rVert_{2}^{2}\\
-  & \text{s.t.}\;
-  & &  y^{i} (\omega^{T} X^{i} +b) \geq 1 - \xi^{i}, &  i \in \{1,\dots,n\}\\
+  & \text{ s.t. }\;
+  & &  \xi^{i} \geq 1 - y^{i} (\omega^{T} X^{i} +b), &  i \in \{1,\dots,n\}\\
   & & & \xi^{i} \geq 0, & i \in \{1,\dots, n\}
-\end{aligned} \end{equation*}
+\end{aligned}
+$$
 
 \subsection*{Sparse SVM with binary variables}
 
