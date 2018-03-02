@@ -2,3 +2,8 @@
 # no compiled files
 *.pyc
 
+# latex
+*.aux
+*.log
+*.out
+*.pdf

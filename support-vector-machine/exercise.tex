@@ -1,110 +1,100 @@
-\documentclass[10pt]{beamer}
+\documentclass[12pt]{article}
 
 \usepackage[utf8]{inputenc}
-\usepackage{default}
+\usepackage[margin=3cm]{geometry}
 \usepackage{amsmath, amssymb}
 \usepackage{listings}
-\usepackage{tikz}
-\usepackage{xcolor}
-\usepackage{booktabs}
+\usepackage{paralist}
 
-\title{Exercise: Sparse Support Vector Machines with PySCIPOpt}
+\newcommand\abs[1]{\left|#1\right|}
+\newcommand{\R}{\mathbb{R}}
+\newcommand\ttt\texttt
+
+\setlength{\parindent}{0pt}
 
 \begin{document}
 
-\section{Motivation for sparse linear classifiers}
+\section*{Sparse Support Vector Machines with PySCIPOpt}
 
-Hypothesis of a linear classification model for $d$-dimensional data:
-\begin{displaymath}
-  h_{\omega, b}(x) = \signum (\omega^{T}x + b)
-\end{displaymath}
+\subsection*{Motivation for sparse linear classifiers}
 
-\begin{block}{Sparsity}
-  Fraction of $\omega$ entries equal to 0:
-  \begin{displaymath}
-    \rho(\omega) = \frac{|\{ i \; : \; \omega_{i} = 0 \}|}{d}
-  \end{displaymath}
-\end{block}
+Given a set $X$ of $d$-dimensional data consisting of two types of points, we want to find a function that classifies the point to be in one of the two sets based on its location.
+We want work with the hypothesis of a linear classification model, i.e. we look for a hyperplane that seperates these two sets.
+A hyperplane $h$ is given by a normal vector $\omega$ and an offset $b$ and shall fulfill the following equality for as many datapoints $x$ as possible:
+$$ h_{\omega, b}(x) = \text{sgn} (\omega^{T}x + b) $$
 
-Advantages of a sparse classifier
-\begin{itemize}
-  \item reduced cost of classification
-  \item simpler model (Ocram's razor)
-\end{itemize}
+A sparse classifier with sparsity $\rho$ consists of a $\omega$ and $b$ where a fraction of the $\omega$ entries is equal to 0:
+$$ \rho(\omega) = \frac{\abs{\{ i \colon \omega_{i} = 0 \}}}{d} $$
 
-\section{Linear Support Vector Machine, a discrete optimization model for sparse SVM}
+Advantages of a sparse classifier are a \emph{smaller} cost of classification and that is yields a \emph{simpler model} (\emph{Occam's razor}).
 
-Let the training set consist of $n$ $d$-dimensional features $X \in \RR^{n,d}$, labeled by $y \in \{-1,+1\}^{n}$. Let $C > 0$ be a regularization parameter.
-As loss function, we consider the Hinge loss $l^{i}(x) :=  \max \{0, 1 - y^{i}x\}$ for $i \in \{1,\dots, n\}$
+\subsection*{Linear SVM, a discrete optimization model for sparse SVM}
 
-\begin{equation*}
-  \begin{aligned}
-    & \min\limits_{\omega, b}
-    & & \frac{C}{n} \sum\limits_{i = 1}^{n}
-    \begin{array}[t]{c}
-      \underbrace{\max\{0, (1 - y^{i} (\omega^{T}X^{i} + b)\}}\\
-            =: \xi^{i} \geq 0
-    \end{array}
-    +\frac{1}{2} \lVert \omega \rVert_{2}^{2}
-  \end{aligned}
-\end{equation*}
+Let the set of datapoints consist of $n$ $d$-dimensional features $X \in \R^{n,d}$, labeled by $y \in \{-1,+1\}^{n}$ and let $C > 0$ be a regularization parameter.
+As a loss function, we consider the \emph{Hinge loss}
+$l^{i}(x) :=  \max \{0, 1 - y^{i}x\}$ for $i \in \{1,\dots, n\}$
 
+\begin{equation*} \begin{aligned}
+  & \min\limits_{\omega, b}
+  & & \frac{C}{n} \sum\limits_{i = 1}^{n}
+  \begin{array}[t]{c}
+    \underbrace{\max\{0, (1 - y^{i} (\omega^{T}X^{i} + b)\}}\\
+          =: \xi^{i} \geq 0
+  \end{array}
+  +\frac{1}{2} \lVert \omega \rVert_{2}^{2}
+\end{aligned} \end{equation*}
 
-\begin{displaymath}
-  \Leftrightarrow
-\end{displaymath}
+$$ \Leftrightarrow $$
 
-\begin{equation*}
-  \begin{aligned}
-    & \min\limits_{\omega, b}
-    & & \frac{C}{n} \sum\limits_{i = 1}^{n} \xi^{i} + \frac{1}{2} \lVert \omega \rVert_{2}^{2}\\
-    & \text{s.t.}\;
-    & &  y^{i} (\omega^{T} X^{i} +b) \geq 1 - \xi^{i}, &  i \in \{1,\dots,n\}\\
-    & & & \xi^{i} \geq 0, & i \in \{1,\dots, n\}
-  \end{aligned}
-\end{equation*}
+\begin{equation*} \begin{aligned}
+  & \min\limits_{\omega, b}
+  & & \frac{C}{n} \sum\limits_{i = 1}^{n} \xi^{i} + \frac{1}{2} \lVert \omega \rVert_{2}^{2}\\
+  & \text{s.t.}\;
+  & &  y^{i} (\omega^{T} X^{i} +b) \geq 1 - \xi^{i}, &  i \in \{1,\dots,n\}\\
+  & & & \xi^{i} \geq 0, & i \in \{1,\dots, n\}
+\end{aligned} \end{equation*}
 
-\section{Sparse SVM with binary variables}
+\subsection*{Sparse SVM with binary variables}
 
 What if only a certain fraction of features weights can be nonzero?
 
 \emph{2 possibilities}:
-\begin{itemize}
+\begin{compactitem}[$\circ$]
   \item preferring sparse solutions using an $L1$-norm in the objective function (this can be easily done in sklearn)
   \item adding additional constraints and variables to the model.
-\end{itemize}
+\end{compactitem}
 \begin{equation*}
   \begin{aligned}
     & \min
     & & \frac{C}{n} \sum\limits_{i = 1}^{n} \xi^{i} + \frac{1}{2} \lVert \omega \rVert_{2}^{2}\\
     & \text{s.t.}
     & & y^{i} (\omega^{T} X^{i} + b) \geq 1 - \xi^{i}, \; & i \in \{1,\dots,n\}\\
-    \visible<3->
-    {
-      & & & -B \cdot v_{j} \leq w_{j} \leq B \cdot v_{j}, \; & j \in \{ 1 \dots d \}\\
-    }
-    \visible<4->
-    {
-      & & & \sum_{j \in d} v_{j} \leq f \cdot d\\
-    }
+    & & & -B \cdot v_{j} \leq w_{j} \leq B \cdot v_{j}, \; & j \in \{ 1 \dots d \}\\
+    & & & \sum_{j \in d} v_{j} \leq f \cdot d\\
     & & & \xi^{i} \geq 0, \; & i \in \{1, \dots, n\} \\
-    \visible<2->
-    {
-      & & & v_{j} \in \{0,1\}, & j \in \{1,\dots, d\}
-    }
+    & & & v_{j} \in \{0,1\}, & j \in \{1,\dots, d\}
   \end{aligned}
 \end{equation*}
 
-\section{Quickstart to PySCIPOpt}
 
-\section[fragile]{Python interface: Overview}
+
+
+
+
+
+
+
+
+
+\section*{Quickstart to PySCIPOpt}
+
+\subsection*{Python interface}
 
 PySCIPOpt is the Python interface for SCIP.
-\begin{itemize}
-\item released in 03/2016
-\item allows for fast model prototyping with flexible expressions
-\item supports user-plugins similar to C
-\end{itemize}
+It allows for \emph{fast model prototyping} with \emph{flexible expressions}.
+Additionally PySCIPOpt supports \emph{user-plugins} similar to C.
+
+Example:
 
 \lstset{language=python,%
 basicstyle=\sffamily\footnotesize,%
@@ -125,26 +115,27 @@ numberstyle=\sffamily\tiny\color{siennabrown},stepnumber=1}
   m.optimize()
 \end{lstlisting}
 
-\section[fragile]{Adding variables}
-  \lstset{language=python,%
+\subsection*{Adding variables}
+
+Different variable types \ttt{vtype} are supported by \ttt{addVars}: \ttt{B} (binary), \ttt{I} (integer), \ttt{C} (continuous).
+You can specify lower and upper bounds: \ttt{lb} (default: 0), \ttt{ub} (default: \ttt{None} $\sim \infty$), as well as objective coefficients: \ttt{obj} (default: $0.0$).
+
+\lstset{language=python,%
 basicstyle=\sffamily\footnotesize,%
 numberstyle=\sffamily\tiny\color{siennabrown},stepnumber=1}
-  \begin{lstlisting}[frame=tb]{}
+
+\begin{lstlisting}[frame=tb]{}
   m = Model("svm")
 
   # add variables
   x = m.addVar(vtype='C', name='x', lb=-10, ub=10, obj = 1.0)
-  \end{lstlisting}
+\end{lstlisting}
 
-\begin{itemize}
-\item Supported variable types \texttt{vtype}: 'B'inary, 'I'nteger, 'C'ontinuous
-\item lower and upper bounds: \texttt{lb} (default: 0), \texttt{ub} (default: \texttt{None} $\sim \infty$)
-\item objective coefficients: \texttt{obj} (default: $0.0$)
-\end{itemize}
+\subsection*{Adding constraints}
 
+\ttt{addCons} understands expression objects and requires an operator \ttt{<=}, \ttt{>=}, \ttt{==}. Variables and constants can appear on both sides of the operator.
+For complex expressions use the \ttt{quicksum} summation and python list comprehension \ttt{[a[i] for i in range(5)]}, multiplying variables yields nonlinear constraints,
 
-
-\section[fragile]{Adding constraints to a model}
 \begin{lstlisting}[frame=tb]{}
   from pyscipopt import Model, quicksum
   m = Model("svm")
@@ -152,63 +143,35 @@ numberstyle=\sffamily\tiny\color{siennabrown},stepnumber=1}
   for i in range(10):
       vars.append(m.addVar(vtype='B', name=str(i)))
   m.addCons(vars[0] ** 2 == 1)
-  m.addCons(
-      quicksum(i * vars[i] for i \
-               in range(10) <= 15),
-               name="mycons")
+  m.addCons(quicksum(i * vars[i] for i in range(10) <= 15),
+            name="mycons")
 
   m.optimize()
 \end{lstlisting}
 
-\begin{itemize}
-\item \texttt{addCons} understands expression objects
-\item require an operator \texttt{<=}, \texttt{>=}, \texttt{==}, variables and constants can appear on both sides of the operator
-\item multiplying variables yields nonlinear constraints
-\item use the \texttt{quicksum} summation and python list comprehension \texttt{[a[i] for i in range(5)]} for complex expressions
-\end{itemize}
+\subsection*{Nonlinear objective functions}
+SCIP can only handle linear objective functions.
+Therefore a nonlinear objective function must be transformed into a constraint using an auxiliary variable:
+$$ \text{min } f(x) \; \Leftrightarrow \; \text{min } t \text{ such that } f(x) \leq t $$
 
-\section{Objective functions}
-\begin{block}{Note}
-  SCIP only understands linear objective functions; A nonlinear objective function must be transformed into a constraint using an auxiliary variable:
-    \begin{equation*}
-      \begin{aligned}
-        & \min
-        & & f(x) \\
-        \Leftrightarrow \\
-        & \min
-        & & t \\
-        & \text{s.t.}
-        & &f(x) \leq t
-      \end{aligned}
-    \end{equation*}
 
-\end{block}
 
-\section{Material}
+\section*{Material}
 
-\section[fragile, label=fw]{Framework for this exercise}
-
-  If you haven't done so yet,
-  \begin{center}
-    \texttt{git clone https://github.com/fschloesser/scip-workshop}
-  \end{center}
-
-  The sub directory \url{springschool/scip-svm} contains:
-  \begin{itemize}
-    \item a subdirectory \texttt{data}
-    \item a python file \texttt{svm.py}
-  \end{itemize}
-
+This exercise with solution can be found on
+\begin{center}
+  \ttt{git clone https://github.com/fschloesser/scip-workshop}
 \end{center}
 
+The sub directory \ttt{scip-workshop/support-vector-machine} contains a subdirectory \ttt{data} and a python file \ttt{svm.py}.
 
-\section{Data Set}
-  Source : \url{http://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/}
-  \begin{itemize}
-    \item classification of benign ($y=-1$) or malignant ($y=1$) breast cancer
-    \item \# Training samples : 569
-    \item \# features : 30
-  \end{itemize}
+The dataset for training is the classification of benign ($y=-1$) or malignant ($y=1$) breast cancer based on 30 features and contains 569 training samples.
+It is taken from:
+
+\begin{center}
+  \ttt{\footnotesize http://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/}
+\end{center}
+
 
 \end{document}
 
