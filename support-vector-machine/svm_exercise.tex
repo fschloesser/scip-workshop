@@ -5,6 +5,7 @@
 \usepackage{amsmath, amssymb}
 \usepackage{graphicx}
 \usepackage{wrapfig}
+\usepackage{listings}
 
 \newcommand\abs[1]{\left|#1\right|}
 \newcommand{\R}{\mathbb{R}}
@@ -51,16 +52,42 @@ $$ \rho(\omega) = \frac{\abs{\{ i \colon \omega_{i} = 0 \}}}{d} $$
 
 Advantages of a sparse classifier are \emph{a smaller cost} of the classification and the fact that it results in a \emph{simpler model}\footnote{\emph{Occam's razor}: from a set of solutions to a problem select the one that makes the fewest assumptions.}
 
+\section*{Material}
 
-\clearpage
-\section*{Optimization model - linear SVM}
+The sub directory \ttt{scip-workshop/support-vector-machine} is the place where you should place you python script.
+It also contains a subdirectory \ttt{data}, which contains means to read in the data by the following python commands:
+
+\lstset{language=python,%
+basicstyle=\sffamily\footnotesize,%
+numberstyle=\sffamily\tiny\color{siennabrown},stepnumber=1}
+\begin{lstlisting}[frame=tb]{}
+  from data.load_cancer import load_cancer
+
+  dataset = load_cancer()
+  X = np.array(dataset.data)
+  y = np.array(dataset.targets)
+\end{lstlisting}
+
+The dataset is the classification of benign ($y=-1$) or malignant ($y=1$) breast cancer based on 30 features and contains 569 data points.
+Out of these 212 are malignant and 357 are benign.
+It is taken from:
+
+\begin{center}
+  \ttt{\small http://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/}
+\end{center}
+
+For all the exercises you should split the dataset into two parts, one that you train on and one that you predict.
+
+\section*{Exercise 1}
+
+Your first task is to implement a linear svm with the following model.
 
 Let the set of datapoints consist of $n$ $d$-dimensional features $X \in \R^{n,d}$, labeled by $y \in \{-1,+1\}^{n}$ and let $C > 0$ be a regularization parameter.
-As a loss function, we consider the \emph{Hinge loss}:
+As a loss function, consider the \emph{Hinge loss}:
 $$l^{i}(t) :=  \max \{0, 1 - y^i t\} \text{\quad for } i \in \{1,\dots, n\}$$
 
-We will use this function to penalize wrongly classified datapoints.
-As we want to minimize the penalty, and maximize the margin (equivalently minimize the length of $\omega$), our model can now be written as the following optimization problem:
+Use this function to penalize wrongly classified datapoints.
+As you want to minimize the penalty, and maximize the margin (equivalently minimize the length of $\omega$), the model can now be written as the following optimization problem:
 
 $$
 \min\limits_{\omega, b}
@@ -91,9 +118,11 @@ the above problem is equivalent to:
 \end{array}
 \end{equation*}
 
-\section*{Model - Sparse linear SVM}
+\section*{Exercise 2}
 
-To implement a sparse classifier with sparsity $\rho$, we add additional constraints and variables to the model\footnote{
+Modify the model from exercise 1 to produce a sparse classifier.
+
+To implement a sparse classifier with sparsity $\rho$, add additional constraints and variables to the model\footnote{
   Another possibility would be to prefer sparse solutions using an $L1$-norm in the objective function.}.
 
 \begin{equation*}
@@ -109,11 +138,11 @@ To implement a sparse classifier with sparsity $\rho$, we add additional constra
 \end{array}
 \end{equation*}
 
-For $i \in \{ 1, \dots, d \}$ we assume the weights $\omega_j$ to be bounded by $-B$ and $B$ for a bound $B > 0$.
+For $i \in \{ 1, \dots, d \}$ assume the weights $\omega_j$ to be bounded by $-B$ and $B$ for a bound $B > 0$.
 Only a fraction of these new binary indicator variables $v_j$ are allowed to be nonzero.
 Then all the $v_j$ that are zero will force their corrensponding $\omega_j$ to be zero.
 
-\section*{Balancing data}
+\section*{Exercise 3}
 
 Depending on the number of positive and negative samples in the data we might want to weight the penalties differently, ensuring that points from one of the sets have a higher probability to be classified correctly\footnote{
   An application would be medical tests, where the a false negative should be highly unlikely, whereas a false positive is not disastrous.}.
@@ -128,21 +157,12 @@ $$
 \end{cases}
 $$
 
-\section*{Material}
+Your task is to balance the data.
 
-This exercise with solution can be found on
-\begin{center}
-  \ttt{git clone https://github.com/fschloesser/scip-workshop}
-\end{center}
-
-The sub directory \ttt{scip-workshop/support-vector-machine} contains a subdirectory \ttt{data} and a python file \ttt{svm.py}.
-
-The dataset for training is the classification of benign ($y=-1$) or malignant ($y=1$) breast cancer based on 30 features and contains 569 training samples.
-It is taken from:
-
-\begin{center}
-  \ttt{\footnotesize http://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/}
-\end{center}
+RESULTS
+Exercise 1
+Exercise 2
+Exercise 3
 
 
 \end{document}
