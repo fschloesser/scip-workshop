@@ -7,3 +7,6 @@
 *.log
 *.out
 *.pdf
+
+# swap files
+*.swp
