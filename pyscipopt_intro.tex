@@ -1,0 +1,85 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[margin=3cm]{geometry}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+
+\newcommand\abs[1]{\left|#1\right|}
+\newcommand{\R}{\mathbb{R}}
+\newcommand\ttt\texttt
+\renewcommand\arraystretch{1.5}
+
+\setlength{\parindent}{0pt}
+
+\title{Introduction to PySCIPOpt}
+
+\begin{document}
+
+\maketitle
+
+PySCIPOpt is the Python interface for SCIP.
+It allows for \emph{fast model prototyping} with \emph{flexible expressions}.
+Additionally PySCIPOpt supports \emph{user-plugins} similar to C.
+
+\lstset{language=python,%
+basicstyle=\sffamily\footnotesize,%
+numberstyle=\sffamily\tiny\color{siennabrown},stepnumber=1}
+\begin{lstlisting}[frame=tb]{}
+  from pyscipopt import Model
+
+  # initialize model
+  m = Model("svm")
+
+  # add variables
+  x = m.addVar(vtype='B', name='x')
+  y = m.addVar(vtype='C', name='y')
+
+  # add a constraint
+  m.addCons(3 * x + 2 * y >= 4)
+
+  m.optimize()
+\end{lstlisting}
+
+\section*{Adding variables}
+
+Different variable types \ttt{vtype} are supported by \ttt{addVars}: \ttt{B} (binary), \ttt{I} (integer), \ttt{C} (continuous).
+You can specify lower and upper bounds: \ttt{lb} (default: 0), \ttt{ub} (default: \ttt{None} $\sim \infty$), as well as objective coefficients: \ttt{obj} (default: $0.0$).
+
+\lstset{language=python,%
+basicstyle=\sffamily\footnotesize,%
+numberstyle=\sffamily\tiny\color{siennabrown},stepnumber=1}
+
+\begin{lstlisting}[frame=tb]{}
+  m = Model("svm")
+
+  # add variables
+  x = m.addVar(vtype='C', name='x', lb=-10, ub=10, obj = 1.0)
+\end{lstlisting}
+
+\section*{Nonlinear objective functions}
+
+SCIP can only handle linear objective functions.
+Therefore a nonlinear objective function must be transformed into a constraint using an auxiliary variable:
+$$ \text{min } f(x) \; \Leftrightarrow \; \text{min } t \text{ such that } f(x) \leq t $$
+
+\section*{Adding constraints}
+
+\ttt{addCons} understands expression objects and requires an operator \ttt{<=}, \ttt{>=}, \ttt{==}. Variables and constants can appear on both sides of the operator.
+For complex expressions use the \ttt{quicksum} summation and python list comprehension \ttt{[a[i] for i in range(5)]}, multiplying variables yields nonlinear constraints,
+
+\begin{lstlisting}[frame=tb]{}
+  from pyscipopt import Model, quicksum
+  m = Model("svm")
+  vars = []
+  for i in range(10):
+      vars.append(m.addVar(vtype='B', name=str(i)))
+  m.addCons(vars[0] ** 2 == 1)
+  m.addCons(quicksum(i * vars[i] for i in range(10) <= 15),
+            name="mycons")
+
+  m.optimize()
+\end{lstlisting}
+
+\end{document}
+
