@@ -1,0 +1,236 @@
+\documentclass[a4paper,10pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb}
+\usepackage{listings}
+%opening
+\title{PySCIPOpt Exercise: Capacitated Facility Location}
+\author{Gregor Hendel, Franziska Schlösser, Felipe Serrano}
+
+\lstset{basicstyle={\ttfamily\scriptsize},language=python}
+\begin{document}
+
+\maketitle
+
+
+
+
+\section{Overview}
+
+Facility Location is an entire area of different optimization problems. In this exercise, we 
+consider the well-studied, capacitated variant.
+
+Capacitated facility location denotes the task
+of connecting customers to facilities in an optimal way,
+minimizing both the opening costs of 
+the involved facilities and the costs to serve
+the clients.
+
+More mathematically, let $I$ be the set of customers
+and $J$ be the set of (potential) facilities. In addition, we use
+
+\begin{itemize}
+ \item $d : I \rightarrow \mathbb{R}_{+}$ the \emph{demand} of each customer
+ \item $M : J \rightarrow \mathbb{R}_{+}$ the \emph{capacity} of each facility
+ \item $f : J \rightarrow \mathbb{R}_{+}$ the \emph{opening costs} of a facility
+ \item $c : I \times J \rightarrow \mathbb{R}_{+}$
+    the \emph{unit costs} of connecting
+    a customer and a facility.
+    
+With those prerequisites, a mixed integer formulation 
+of the capacitated facility location
+is
+
+\begin{align}
+ \begin{aligned}
+  &\min &\sum\limits_{j \in J} f(j) y_{j} + \sum\limits_{i \in I} c(i,j) x_{i,j}\\
+  & s.t. & \sum\limits_{j \in J} x_{i,j} &= d(i) & \forall i \in I\\
+  && \sum\limits_{i \in I} x_{i,j} &\leq M(j)y_{j} & \forall j \in J\\
+  && y_{j} &\in \{0,1\} & \forall j \in J\\
+  && x_{i,j} &\geq 0 &\forall i \in I,\forall j \in J  
+ \end{aligned}
+\end{align}
+
+
+\end{itemize}
+
+\section{Model}
+
+\subsection{Basic Model creation}
+
+All of the necessary code for this exercise goes into 
+the single file "flp.py". The file already contains the 
+function signature
+
+\begin{lstlisting}
+def flp(I, J, d, M, f, c):
+    """flp -- model for the capacitated facility location problem
+    Parameters:
+        - I: set of customers
+        - J: set of facilities
+        - d[i]: demand for customer i
+        - M[j]: capacity of facility j
+        - f[j]: fixed cost for using a facility in point j
+        - c[i,j]: unit cost of servicing demand point i from facility j
+    Returns a model, ready to be solved.
+    """ 
+\end{lstlisting}
+
+All the necessary input data necessary input data are passed as arguments to this function, which should finally declare and return the optimization problem to the script.
+The following steps are necessary to 
+model the capacitated facility location:
+
+\begin{enumerate}
+ \item creating a new model using the function \texttt{Model}.
+ \item creating variables using the \texttt{model.addVar()} function. It is good practice to store the variables in dictionaries \texttt{y} and \texttt{x} indexed by the facilities
+ and the edges $i,j$, respectively.
+\begin{lstlisting}
+ y["myvar"] = model.addVar(vtype = "B", name = "variable_one")
+\end{lstlisting}
+Objective coefficients are passed by setting the objective function later.
+ 
+ \item creating both types of linear constraints, the demand satisfaction and the capacity restrictions, can be done by using the function \texttt{model.addCons()}.
+ Constraints are added as linear or nonlinear expressions of the variables.
+ \begin{lstlisting}
+     model.addCons(v + 3 * w + 4 * t <= 6, "example_cons")
+ \end{lstlisting}
+ In this example, all \texttt{v}, \texttt{t}, and \texttt{w} should be variables that have been previously added with \texttt{addVar()}.
+ 
+ It is good practice to wrap these expressions
+ into the \texttt{quicksum} function of PySCIPOpt.
+ The \texttt{quicksum} function would be useless if it did not accept
+ Python list comprehensions.
+ \begin{lstlisting}
+ model.addCons(quicksum(10 * t for t in [u,v,w]) <= 15)
+ \end{lstlisting}
+ 
+ \item Use the function \texttt{model.setObjective()} to set the objective function. This function accepts expressions using \texttt{quicksum} exactly like \texttt{addCons}.
+ 
+ \item \texttt{return} the resulting model. The \texttt{data} attribute is used for plotting and the heuristic of the next exercise
+\end{enumerate}
+
+\subsection{Running the basic model}
+
+Run the model by executing \texttt{python flp.py}. You see the log output of SCIP. What is the number of open facilities in the optimal solution? What are its total costs? How many nodes does SCIP need to optimize this problem? If you have the python package \texttt{networkx} installed, a graphical display should open and render the solution as a graph.
+
+\subsection{Extending the model}
+
+The initial LP relaxation can be made stronger. As a matter of fact, one can easily formulate upper bounds the $x$ variables. Infact, because of the nonnegative costs, none of the $x$ variables will exceed the demand of its associated customer. Infact, one can even make this stronger: $x_{i,j} \leq d(i,j) y_{j}$ for all $i \in I$ and $j \in J$. Such inequalities are also called variable bound inequalities in SCIP as the upper bound of $x_{i,j}$ varies with the values of the $y_{j}$'s.
+
+Add these additional inequalities to the model. By how much does the value of the initial root LP relaxation
+change by the tighter formulation?
+
+else:
+            accepted = False
+
+\section{Heuristic}
+
+After the modeling has been finished, it is a natural second step to 
+customize the solution process to the model at hand.
+SCIP's plugin based system allows for extensions to all main components
+of the solution process.
+For the sake of this exercise, we extend the primal heuristics of
+SCIP by an additional greedy heuristic.
+
+The file "flp.py" already contains the class
+\texttt{GreedyHeur} with a functional, yet 
+empty class method \texttt{heurexec}.
+The greedy algorithm should be completely implemented within this method.
+The heuristic has already been added (included) to the model
+object, such that calling optimize triggers the 
+execution of the greedy heuristic at the specified timing,
+i.e., every time a search node has been selected, but not processed yet.
+
+\begin{lstlisting}
+ class GreedyHeur(Heur):
+
+    def heurexec(self, heurtiming, nodeinfeasible):
+        """execution callback of the greedy heuristic
+
+        Parameters:
+        -self: the heuristic itself, with the FLP model as attribute
+        -heurtiming: timing during the search process
+        -nodeinfeasible: flag to indicate whether this node is already infeasible.
+        """
+
+        if nodeinfeasible:
+            return {"result" : SCIP_DIDNOTRUN}
+
+        sol = self.model.createSol(self)
+        x, y, M, d, c, I = self.model.data
+
+        if False:
+            accepted = self.model.trySol(sol)
+        else:
+            accepted = False
+            
+        if accepted:
+            return {"result": SCIP_RESULT.FOUNDSOL}
+        else:
+            return {"result": SCIP_RESULT.DIDNOTFIND}
+
+if __name__ == "__main__":
+    I, J, d, M, f, c = make_data()
+    model = flp(I, J, d, M, f, c)
+    model.includeHeur(GreedyHeur(), 
+        "greedyfacility", 
+        "greedy heuristic for capacitated facility location", 
+        "Y",
+        timingmask = SCIP_HEURTIMING.BEFORENODE)
+\end{lstlisting}
+
+We suggest to implement a primal heuristic that implements 
+the following simple greedy procedure.
+
+\begin{enumerate}
+    \item Select the facility $j^{*} \in J$ that provides
+    the highest capacity/cost ratio.
+    \item Set $y_{j^{*}} = 1$.
+    \item Choose a customer $i^{*}$ with some residual demand
+    with the cheapest connection cost $c_{i^{*}, j^{*}}$.
+    \item Set $x_{i^{*},j^{*}} = \min\{d(i^{*}), M(j^{*})\}$
+    \item Repeat 3. and 4. until $j^{*}$ is saturated,
+    or no customer is left.
+    \item Remove $j^{*}$ from the set of facilities.
+    \item Go to 1. 
+\end{enumerate}
+
+\paragraph{Task}
+Implement the algorithm, and comment on its success.
+
+\paragraph{Hints}
+
+\begin{itemize}
+ \item all necessary data has already been unpacked from the 
+ model data object. This need not be modified.
+ \item The function for setting solution values 
+ is \texttt{model.setSolVal(sol, var, value)}
+ The \texttt{sol} object has already been created for you
+ \item You may encounter output that 
+ reports a violated constraint or variable bound. This
+ violation output is expected for this heuristic, but
+ does not render the solving process infeasible.
+ Can you think of a reason why this output appears?
+\end{itemize}
+ 
+\paragraph{Extension}
+ 
+ The heuristic is included with a heuristic frequency
+ of 1, which means that it is run at every node of the search. The algorithm
+ does not use local information, yet. Hence, the greedy procedure 
+ is the same at every node.
+ You may consider local bounds for the $y_{j}$
+ variables to split the facilities into the subsets
+ of open, closed, and undecided facilities. Therefore,
+ you need to query the local lower and upper bounds of
+ the variables. The respective methods are
+ \texttt{var.getLbLocal()} and \texttt{var.getUbLocal()}.
+ How do you use this information to modify the algorithm?
+ 
+
+
+
+
+
+
+
+\end{document}
