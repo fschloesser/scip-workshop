@@ -10,6 +10,8 @@
 \newcommand\abs[1]{\left|#1\right|}
 \newcommand{\R}{\mathbb{R}}
 \newcommand\ttt\texttt
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+
 \renewcommand\arraystretch{1.5}
 
 \setlength{\parindent}{0pt}
@@ -83,11 +85,11 @@ For all the exercises you should split the dataset into two parts, one that you 
 Your first task is to implement a linear svm with the following model.
 
 Let the set of datapoints consist of $n$ $d$-dimensional features $X \in \R^{n,d}$, labeled by $y \in \{-1,+1\}^{n}$ and let $C > 0$ be a regularization parameter.
-As a loss function, consider the \emph{Hinge loss}:
+To penalize wrongly classified datapoints, consider as a loss function the \emph{Hinge loss}\footnote{
+  Here $t$ is the evaluation of the classifier on datapoints.}:
 $$l^{i}(t) :=  \max \{0, 1 - y^i t\} \text{\quad for } i \in \{1,\dots, n\}$$
 
-Use this function to penalize wrongly classified datapoints.
-As you want to minimize the penalty, and maximize the margin (equivalently minimize the length of $\omega$), the model can now be written as the following optimization problem:
+As you want to minimize the penalty, and maximize the margin (equivalently minimize the length of $\omega$, since the width of the margin is given by $\frac{2}{\norm{\omega}}$), the model can now be written as the following optimization problem:
 
 $$
 \min\limits_{\omega, b}
@@ -98,7 +100,7 @@ $$
 Substituting the Hinge loss for a variable
 
 $$ \begin{aligned}
-\xi^i &\leq l^i( \omega^T X^i + b ) \\
+\xi^i &\geq l^i( \omega^T X^i + b ) \\
 &= \max \{0, 1 - y^i (\omega^TX^i + b) \},
 \end{aligned} $$
 
@@ -158,12 +160,6 @@ $$
 $$
 
 Your task is to balance the data.
-
-RESULTS
-Exercise 1
-Exercise 2
-Exercise 3
-
 
 \end{document}
 
