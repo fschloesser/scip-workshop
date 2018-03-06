@@ -14,18 +14,18 @@ mode = "sparse" # mode is in ['linear', 'sparse']
 sparsity = .5  # between 0.0 and 1.0 (1: all features are used, 0: none are used)
 
 # C is a regularization parameter
-C = 10.0 # positive float
+C = 100.0 # positive float
 
 # set the bounds for the weights. Weights will be between [-weightBound, weightBound]
-weightBound = 50.0 # positive float
+weightBound = 1000.0 # positive float
 # set these to [1.0, 1.0] if you don't want to manually balance anything
 balance = [1.0, 1.0] # list of length 2
 
 # set the time limit
-tLim = 10.0 # positive float
+tLim = 100.0 # positive float
 
 # train on how many samples?
-n_train = 150
+n_train = 568
 
 #############    Load data
 #############################################################################
@@ -44,16 +44,17 @@ n = len(Y_orig)
 randnums = random.sample(range(n), n_train)
 
 # save the first n datapoints for prediction
-X_predict = X_orig[randnums]
-Y_predict = Y_orig[randnums]
-n = len(Y_predict)
+X = X_orig[randnums]
+Y = Y_orig[randnums]
 
 diff = [n for n in range(n) if not n in randnums]
+diff = range(n)
 
-X = X_orig[diff]
-Y = Y_orig[diff]
+X_predict = X_orig[diff]
+Y_predict = Y_orig[diff]
 
 nexamples = len(Y) # number of training examples
+n = len(Y_predict)
 
 #############    Model
 #############################################################################
