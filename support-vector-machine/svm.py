@@ -1,4 +1,3 @@
-
 from pyscipopt import Model, quicksum
 from data.load_cancer import load_cancer
 import numpy as np
@@ -8,24 +7,26 @@ import random
 #############    Get user input
 #############################################################################
 
-mode = "sparse" # mode is in ['linear', 'sparse']
+mode = "linear" # mode is in ['linear', 'sparse']
 
 # sparsity of classifier: percentage of present features not being used for classification
 sparsity = .5  # between 0.0 and 1.0 (1: all features are used, 0: none are used)
 
 # C is a regularization parameter
-C = 100.0 # positive float
+C = 1000.0 # positive float
 
 # set the bounds for the weights. Weights will be between [-weightBound, weightBound]
-weightBound = 1000.0 # positive float
+withweightbounds = False
+weightBound = 100.0 # positive float
 # set these to [1.0, 1.0] if you don't want to manually balance anything
 balance = [1.0, 1.0] # list of length 2
 
 # set the time limit
 tLim = 100.0 # positive float
 
-# train on how many samples?
-n_train = 568
+# train on how many samples out of 569?
+randomsample = False
+n_train = 569//2
 
 #############    Load data
 #############################################################################
@@ -41,14 +42,16 @@ Y_orig = np.array(dataset.targets)
 nfeatures = len(X_orig[0]) # number of features (dimension of space)
 n = len(Y_orig)
 
-randnums = random.sample(range(n), n_train)
+if randomsample:
+    randnums = random.sample(range(n), n_train)
+else:
+    randnums = range(0, n_train)
 
 # save the first n datapoints for prediction
 X = X_orig[randnums]
 Y = Y_orig[randnums]
 
 diff = [n for n in range(n) if not n in randnums]
-diff = range(n)
 
 X_predict = X_orig[diff]
 Y_predict = Y_orig[diff]
@@ -69,11 +72,18 @@ model.setRealParam("limits/time", tLim)
 
 omegas = []
 # add weight variables and offset variable (as last one)
-for f in range(nfeatures + 1):
-    omegas.append(model.addVar(vtype='C',
-                               name="omega_%d" % f,
-                               ub = weightBound,
-                               lb = -weightBound))
+if withweightbounds:
+    for f in range(nfeatures + 1):
+        omegas.append(model.addVar(vtype='C',
+                                   name="omega_%d" % f,
+                                   ub = weightBound,
+                                   lb = -weightBound))
+else:
+    for f in range(nfeatures + 1):
+        # since somehow for a continuous var the default lower bound is 0 we have to explicitly set it to infinity
+        omegas.append(model.addVar(vtype='C',
+                                   name="omega_%d" % f,
+                                   lb=-model.infinity() ))
 
 xis = []
 # add variables xi to penalize misclassification
@@ -120,7 +130,7 @@ if mode == "sparse":
 
 #############    Solve / optimize
 #############################################################################
-
+#model.writeProblem()
 model.optimize()
 
 sols = model.getSols()
@@ -135,16 +145,26 @@ primalbound = model.getPrimalbound()
 #############    Predict
 #############################################################################
 
+def scalarprod(a, b):
+    return sum(a[i] * b[i] for i in range(len(a)))
+
+def classify(x, weight, offset):
+    classification = offset + scalarprod(weight, x)
+    #print("classification: {}".format(classification))
+    return classification
+
+def hingeloss(x, y, weight, offset):
+    return max(0, 1 - y * classify(x, weight, offset))
+
 pairs = np.array(list(zip(X_predict, Y_predict)))
-signed_penalties = list(map(
+predictions = list(map(
         lambda x:
-            (x[1]*max(0, 1 - (offset + sum(weights[f] * x[0][f] for f in range(len(x[0]))))*x[1])),
+            (min(0, (x[1] * classify(x[0], weights, offset))) * x[1]),
         pairs))
 
-
-n_wrong_class = sum([0 if p==0 else 1 for p in signed_penalties])
-n_false_positives = sum([1 if p<0 else 0 for p in signed_penalties])
-n_false_negatives = sum([1 if p>0 else 0 for p in signed_penalties])
+n_wrong_classified = sum([1 if p!=0 else 0 for p in predictions])
+n_false_negatives  = sum([1 if p<0 else 0 for p in predictions])
+n_false_positives  = sum([1 if p>0 else 0 for p in predictions])
 
 print("")
 print("RESULTS:")
@@ -163,7 +183,7 @@ print("W = {}".format(weights))
 print("b = {}".format(offset))
 print("obj = {}".format(primalbound))
 print("")
-print("Number of missclassifications: {} out of {} ({} %)".format(n_wrong_class, n, 100*n_wrong_class/n))
+print("Number of missclassifications: {} out of {} ({} %)".format(n_wrong_classified, n, 100*n_wrong_classified/n))
 print("Number of false positives: {} out of {} ({} %)".format(n_false_positives, n, 100*n_false_positives/n))
 print("Number of false negatives: {} out of {} ({} %)".format(n_false_negatives, n, 100*n_false_negatives/n))
 

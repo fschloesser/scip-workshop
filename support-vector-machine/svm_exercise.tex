@@ -108,7 +108,7 @@ the above problem is equivalent to:
 
 \begin{equation*}
 \begin{array}{rll}
-  \min\limits_{\omega, b}
+  \min\limits_{\omega, b, \xi}
   & \frac{C}{n} \sum\limits_{i = 1}^n \xi^i + \frac{1}{2} \lVert \omega \rVert_2^2
 \\
   \text{such that}
@@ -142,7 +142,7 @@ To implement a sparse classifier with sparsity $\rho$, add additional constraint
 
 For $i \in \{ 1, \dots, d \}$ assume the weights $\omega_j$ to be bounded by $-B$ and $B$ for a bound $B > 0$.
 Only a fraction of these new binary indicator variables $v_j$ are allowed to be nonzero.
-Then all the $v_j$ that are zero will force their corrensponding $\omega_j$ to be zero.
+Then all the $v_j$ that are zero will force their corresponding $\omega_j$ to be zero.
 
 \section*{Exercise 3}
 
